@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jogo Futebol | MVP</title>
+    
+    <!-- Tailwind CSS (CDN para Single-File MVP) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Configuração de Cores Base do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        club: {
+                            dark: '#0f172a',
+                            panel: '#1e293b',
+                            accent: '#10b981', // Verde vitória
+                            danger: '#ef4444', // Vermelho crise
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos globais para evitar zoom no double tap em mobile */
+        body {
+            touch-action: manipulation;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #020617; /* Slate 950 */
+            color: #f8fafc;
+        }
+        
+        /* Ocultar barra de rolagem mas manter funcionalidade */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- Container Principal do Jogo (Mobile Simulator View) -->
+    <main class="w-full max-w-md bg-club-dark border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[85vh] relative">
+        
+        <!-- Header -->
+        <header class="bg-club-panel p-4 flex justify-between items-center border-b border-slate-700">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">O Clube</h1>
+                <p class="text-xs text-slate-400">Ano 1 • Era de Ouro</p>
+            </div>
+            <div class="flex gap-2">
+                <!-- Placeholder para botões de menu/config -->
+                <button class="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition">
+                    <i class="ph ph-gear text-lg"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Área de Conteúdo (Log do Sistema por enquanto) -->
+        <section class="flex-1 p-6 overflow-y-auto flex flex-col gap-4" id="game-console">
+            
+            <div class="text-center space-y-2 mt-4">
+                <i class="ph ph-soccer-ball text-4xl text-club-accent animate-bounce"></i>
+                <h2 class="text-2xl font-bold">Motor Iniciado</h2>
+                <p class="text-sm text-slate-400">Verificando infraestrutura e Semente Global UTC...</p>
+            </div>
+
+            <!-- Card de Diagnóstico Técnico -->
+            <div class="mt-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-3">
+                <h3 class="font-semibold text-club-accent flex items-center gap-2">
+                    <i class="ph ph-check-circle"></i> Diagnóstico do Sistema
+                </h3>
+                
+                <div class="space-y-1 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Semente da Semana (UTC):</span>
+                        <span id="sys-seed" class="font-mono font-bold text-white">Calculando...</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Modo de Jogo Atual:</span>
+                        <span id="sys-mode" class="font-bold text-amber-400">Livre</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Armazenamento Local:</span>
+                        <span id="sys-storage" class="font-bold text-emerald-400">Pronto</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Footer (Área de Ação) -->
+        <footer class="p-4 bg-club-panel border-t border-slate-700">
+            <button id="btn-start-test" class="w-full bg-club-accent hover:bg-emerald-400 text-slate-900 font-bold py-4 rounded-xl transition shadow-[0_4px_0_0_#047857] active:shadow-[0_0px_0_0_#047857] active:translate-y-1">
+                Iniciar Teste de Sistema
+            </button>
+        </footer>
+
+    </main>
+
+    <!-- Lógica do Jogo (Fase 1: Infraestrutura e Semente) -->
+    <script>
+        // --- 1. MOTOR DE SEMENTE UTC SEMANAL ---
+        // O objetivo aqui é gerar um ID único que muda toda segunda-feira às 00:00 UTC.
+        // Independentemente de onde o jogador esteja no mundo, o ID será o mesmo.
+        function getGlobalWeeklySeed() {
+            const now = new Date();
+            // Data âncora: 1 de Janeiro de 2024 foi uma Segunda-feira (00:00 UTC)
+            const anchorDate = new Date(Date.UTC(2024, 0, 1)); 
+            const millisecondsInAWeek = 1000 * 60 * 60 * 24 * 7;
+            
+            // Diferença em milissegundos entre agora e a data âncora
+            const diff = now.getTime() - anchorDate.getTime();
+            
+            // Número de semanas passadas desde a âncora
+            const currentWeekNumber = Math.floor(diff / millisecondsInAWeek);
+            
+            // Retorna algo como "WEEK_52"
+            return `WEEK_${currentWeekNumber}`;
+        }
+
+        // --- 2. GERENCIADOR DE ESTADO (SAVE/LOAD SIMPLES) ---
+        // Usaremos o localStorage para manter o MVP simples (sem banco de dados ainda).
+        const Storage = {
+            saveState: (key, data) => {
+                try {
+                    localStorage.setItem(`jogoFutebol_${key}`, JSON.stringify(data));
+                    return true;
+                } catch (e) {
+                    console.error("Erro ao salvar no LocalStorage", e);
+                    return false;
+                }
+            },
+            loadState: (key) => {
+                try {
+                    const data = localStorage.getItem(`jogoFutebol_${key}`);
+                    return data ? JSON.parse(data) : null;
+                } catch (e) {
+                    return null;
+                }
+            }
+        };
+
+        // --- 3. INICIALIZAÇÃO DA INTERFACE ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const seedElement = document.getElementById('sys-seed');
+            const weeklySeed = getGlobalWeeklySeed();
+            
+            // Atualiza a UI com a semente global
+            seedElement.innerText = weeklySeed;
+
+            // Testa o Storage com o Anti-Cheat Log (Replay Log)
+            document.getElementById('btn-start-test').addEventListener('click', () => {
+                const btn = document.getElementById('btn-start-test');
+                btn.innerText = "Sistemas Operacionais!";
+                btn.classList.replace('bg-club-accent', 'bg-blue-500');
+                btn.classList.replace('shadow-[0_4px_0_0_#047857]', 'shadow-[0_4px_0_0_#1d4ed8]');
+
+                // Simulando o salvamento de um replay log de decisões
+                const mockReplayLog = {
+                    seed: weeklySeed,
+                    mode: 'OFICIAL',
+                    decisions: ['opcaoA', 'opcaoB', 'opcaoA'],
+                    result: 'VITORIA_CICLO',
+                    timestampUTC: new Date().toISOString()
+                };
+
+                Storage.saveState('latest_run', mockReplayLog);
+                console.log("Log de Replay Salvo para Validação Futura:", mockReplayLog);
+                
+                // Exibe no console visual
+                const consoleArea = document.getElementById('game-console');
+                const logCard = document.createElement('div');
+                logCard.className = "bg-blue-900/30 p-3 rounded-lg border border-blue-800 text-xs font-mono text-blue-200 mt-2";
+                logCard.innerHTML = `[✓] Log Anti-Cheat gerado e salvo localmente.<br>> Ações: ${mockReplayLog.decisions.join(' -> ')}`;
+                consoleArea.appendChild(logCard);
+            });
+        });
+    </script>
+</body>
+</html>
